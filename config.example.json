@@ -1,0 +1,50 @@
+{
+  "api": {
+    "deepseek_api_key": "YOUR_DEEPSEEK_API_KEY_HERE",
+    "base_url": "https://api.deepseek.com",
+    "model": "deepseek-chat",
+    "max_tokens": 2000,
+    "temperature": 0.7,
+    "timeout": 30
+  },
+  "tts": {
+    "engine": "edge",
+    "voice": "zh-CN-XiaoxiaoNeural",
+    "rate": "+0%",
+    "volume": "+0%",
+    "pitch": "+0Hz",
+    "auto_play": true,
+    "auto_detect_language": true,
+    "fallback_voice": "zh-CN-YunxiNeural"
+  },
+  "ui": {
+    "theme": "default",
+    "font_size": 12,
+    "window_width": 1000,
+    "window_height": 700,
+    "auto_scroll": true,
+    "show_timestamps": true
+  },
+  "conversation": {
+    "auto_save": true,
+    "max_history": 100,
+    "stream_mode": false,
+    "context_length": 10
+  },
+  "voice": {
+    "recognition_engine": "whisper",
+    "language": "zh-CN",
+    "energy_threshold": 300,
+    "pause_threshold": 0.8,
+    "phrase_threshold": 0.3,
+    "non_speaking_duration": 0.5,
+    "auto_adjust_for_ambient_noise": true
+  },
+  "features": {
+    "enable_rag": true,
+    "enable_weather": true,
+    "enable_ip_query": true,
+    "enable_file_management": true,
+    "enable_voice_interaction": true
+  }
+}

@@ -1,0 +1,53 @@
+# 智能语音助手项目依赖
+# 基于Edge TTS项目扩展
+
+# 基础TTS功能（继承自原项目）
+edge-tts>=6.1.0
+pywin32>=306
+
+# 音频播放支持
+pygame>=2.5.0
+playsound==1.2.2
+
+# GUI界面支持
+# tkinter  # Python自带
+
+# AI对话功能
+openai>=1.0.0
+httpx>=0.24.0
+
+# 网络请求支持
+requests>=2.28.0
+aiohttp>=3.8.0
+
+# 数据处理
+json5>=0.9.0
+
+# 系统监控（可选）
+psutil>=5.9.0
+
+# 配置管理
+python-dotenv>=1.0.0
+
+# 日期时间处理
+python-dateutil>=2.8.0
+
+# 异步支持
+asyncio-throttle>=1.0.0
+
+# 错误处理和重试
+tenacity>=8.0.0
+
+# 实时语音对话功能
+SpeechRecognition>=3.10.0
+pyaudio>=0.2.11
+webrtcvad>=2.0.10
+numpy>=1.21.0
+
+# 文件和媒体处理功能
+Pillow>=10.0.0
+
+# 开发工具（可选）
+# pytest>=7.0.0
+# black>=22.0.0
+# flake8>=5.0.0
