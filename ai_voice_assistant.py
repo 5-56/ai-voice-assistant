@@ -75,6 +75,18 @@ class AIVoiceAssistant:
             self.voice_manager = None
             self.VoiceMode = None
 
+        # 语音唤醒检测器
+        try:
+            from wake_word_detector import get_wake_word_detector
+            self.wake_word_detector = get_wake_word_detector()
+            self.wake_word_detector.on_wake_word_detected = self.on_wake_word_detected
+            self.wake_word_detector.on_detection_error = self.on_wake_word_error
+            self.wake_word_enabled = False  # 默认关闭，用户可以手动开启
+        except ImportError as e:
+            logging.warning(f"语音唤醒功能不可用: {e}")
+            self.wake_word_detector = None
+            self.wake_word_enabled = False
+
         # 文件和剪贴板管理器
         try:
             from file_manager import get_file_manager
@@ -177,6 +189,58 @@ class AIVoiceAssistant:
             self.root.after(0, lambda: messagebox.showerror("语音错误", error))
         except Exception as e:
             logging.error(f"语音错误处理失败: {e}")
+
+    def on_wake_word_detected(self, wake_word: str):
+        """语音唤醒词检测回调"""
+        try:
+            logging.info(f"🎤 检测到唤醒词: {wake_word}")
+
+            # 在主线程中执行UI更新和语音模式切换
+            self.root.after(0, lambda: self._handle_wake_word_activation(wake_word))
+
+        except Exception as e:
+            logging.error(f"唤醒词处理失败: {e}")
+
+    def _handle_wake_word_activation(self, wake_word: str):
+        """处理唤醒词激活（在主线程中执行）"""
+        try:
+            # 显示唤醒提示
+            self.update_status(f"🎤 检测到唤醒词: {wake_word}")
+
+            # 在对话区域显示唤醒信息
+            self.add_message_to_display("system", f"🎤 检测到唤醒词: {wake_word}")
+
+            # 自动开启语音模式
+            if self.voice_manager and not self.voice_manager.is_active:
+                self.toggle_voice_mode()
+                self.add_message_to_display("system", "🔊 语音模式已自动开启，请开始对话...")
+
+            # 播放确认音效（可选）
+            self._play_wake_confirmation()
+
+        except Exception as e:
+            logging.error(f"唤醒词激活处理失败: {e}")
+
+    def _play_wake_confirmation(self):
+        """播放唤醒确认音效"""
+        try:
+            # 播放简短的确认语音
+            confirmation_text = "我在，请说"
+            if self.tts_manager:
+                threading.Thread(
+                    target=lambda: asyncio.run(self.tts_manager.speak_text(confirmation_text)),
+                    daemon=True
+                ).start()
+        except Exception as e:
+            logging.error(f"播放唤醒确认音效失败: {e}")
+
+    def on_wake_word_error(self, error: str):
+        """语音唤醒错误回调"""
+        try:
+            logging.error(f"语音唤醒错误: {error}")
+            # 不在界面显示唤醒错误，避免干扰用户
+        except Exception as e:
+            logging.error(f"语音唤醒错误处理失败: {e}")
 
     def update_voice_ui_state(self, status: dict):
         """更新语音相关的UI状态"""
@@ -983,6 +1047,15 @@ class AIVoiceAssistant:
             )
             self.push_to_talk_btn.pack(side=tk.LEFT, padx=(0, self.scale_size(5)))
 
+        # 语音唤醒控制按钮
+        if self.wake_word_detector:
+            self.wake_word_btn = ttk.Button(
+                left_controls,
+                text="🔊 唤醒词",
+                command=self.toggle_wake_word_detection
+            )
+            self.wake_word_btn.pack(side=tk.LEFT, padx=(0, self.scale_size(5)))
+
         # 中间状态显示
         self.processing_label = ttk.Label(
             bottom_frame,
@@ -992,13 +1065,26 @@ class AIVoiceAssistant:
         )
         self.processing_label.pack(side=tk.LEFT, padx=(self.scale_size(10), 0))
 
-        # 右侧发送按钮
+        # 右侧控制按钮
+        right_controls = ttk.Frame(bottom_frame)
+        right_controls.pack(side=tk.RIGHT)
+
+        # 设置按钮
+        if self.wake_word_detector:
+            self.settings_btn = ttk.Button(
+                right_controls,
+                text="⚙️ 设置",
+                command=self.show_wake_word_settings
+            )
+            self.settings_btn.pack(side=tk.LEFT, padx=(0, self.scale_size(5)))
+
+        # 发送按钮
         self.send_button = ttk.Button(
-            bottom_frame,
+            right_controls,
             text="📤 发送 (Ctrl+Enter)",
             command=self.send_message
         )
-        self.send_button.pack(side=tk.RIGHT)
+        self.send_button.pack(side=tk.LEFT)
 
     def create_conversation_list(self, parent):
         """创建对话历史列表"""
@@ -1653,6 +1739,96 @@ class AIVoiceAssistant:
         except Exception as e:
             logging.error(f"录音线程异常: {e}")
             self.root.after(0, lambda: self.update_status(f"录音失败: {e}"))
+
+    def toggle_wake_word_detection(self):
+        """切换语音唤醒词检测"""
+        if not self.wake_word_detector:
+            messagebox.showwarning("功能不可用", "语音唤醒功能不可用，请检查依赖包安装")
+            return
+
+        try:
+            if not self.wake_word_enabled:
+                # 启用唤醒词检测
+                success = self.wake_word_detector.start_detection()
+                if success:
+                    self.wake_word_enabled = True
+                    if hasattr(self, 'wake_word_btn'):
+                        self.wake_word_btn.config(text="🔇 关闭唤醒")
+                    self.update_status("🎤 语音唤醒已启用 - 说'你好文犀'或'文犀出来'来唤醒")
+                    self.add_message_to_display("system", "🎤 语音唤醒已启用，支持的唤醒词：\n• 你好文犀\n• 文犀出来\n• 文犀醒醒\n• 嗨文犀")
+                else:
+                    messagebox.showerror("启动失败", "无法启动语音唤醒检测")
+            else:
+                # 禁用唤醒词检测
+                self.wake_word_detector.stop_detection()
+                self.wake_word_enabled = False
+                if hasattr(self, 'wake_word_btn'):
+                    self.wake_word_btn.config(text="🔊 唤醒词")
+                self.update_status("语音唤醒已禁用")
+                self.add_message_to_display("system", "🔇 语音唤醒已禁用")
+
+        except Exception as e:
+            logging.error(f"切换语音唤醒失败: {e}")
+            messagebox.showerror("唤醒错误", f"切换语音唤醒失败: {e}")
+
+    def show_wake_word_settings(self):
+        """显示唤醒词设置窗口"""
+        if not self.wake_word_detector:
+            messagebox.showwarning("功能不可用", "语音唤醒功能不可用")
+            return
+
+        try:
+            # 创建设置窗口
+            settings_window = tk.Toplevel(self.root)
+            settings_window.title("语音唤醒设置")
+            settings_window.geometry("400x500")
+            settings_window.transient(self.root)
+            settings_window.grab_set()
+
+            # 当前状态
+            status_frame = ttk.LabelFrame(settings_window, text="当前状态", padding=10)
+            status_frame.pack(fill=tk.X, padx=10, pady=5)
+
+            status = self.wake_word_detector.get_status()
+            status_text = f"""
+检测状态: {'运行中' if status['is_active'] else '已停止'}
+检测次数: {status['detection_count']}
+唤醒词数量: {status['wake_words_count']}
+语音识别: {'可用' if status['speech_recognition_available'] else '不可用'}
+"""
+            ttk.Label(status_frame, text=status_text).pack(anchor=tk.W)
+
+            # 唤醒词列表
+            words_frame = ttk.LabelFrame(settings_window, text="支持的唤醒词", padding=10)
+            words_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+            # 创建滚动文本框
+            text_widget = tk.Text(words_frame, height=15, wrap=tk.WORD)
+            scrollbar = ttk.Scrollbar(words_frame, orient=tk.VERTICAL, command=text_widget.yview)
+            text_widget.configure(yscrollcommand=scrollbar.set)
+
+            # 显示唤醒词
+            wake_words = self.wake_word_detector.get_wake_words()
+            for i, word in enumerate(wake_words, 1):
+                text_widget.insert(tk.END, f"{i}. {word}\n")
+
+            text_widget.config(state=tk.DISABLED)
+            text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+            # 控制按钮
+            button_frame = ttk.Frame(settings_window)
+            button_frame.pack(fill=tk.X, padx=10, pady=5)
+
+            ttk.Button(
+                button_frame,
+                text="关闭",
+                command=settings_window.destroy
+            ).pack(side=tk.RIGHT)
+
+        except Exception as e:
+            logging.error(f"显示唤醒词设置失败: {e}")
+            messagebox.showerror("设置错误", f"显示唤醒词设置失败: {e}")
 
     # 文件管理功能
     def open_file_management(self):
