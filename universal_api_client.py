@@ -183,12 +183,21 @@ class UniversalAPIClient:
                     # 提取回复内容
                     if "content" in result and result["content"]:
                         content = result["content"][0]["text"]
+
+                        # 转换Anthropic API的usage格式为标准格式
+                        claude_usage = result.get("usage", {})
+                        usage = {
+                            "prompt_tokens": claude_usage.get("input_tokens", 0),
+                            "completion_tokens": claude_usage.get("output_tokens", 0),
+                            "total_tokens": claude_usage.get("input_tokens", 0) + claude_usage.get("output_tokens", 0)
+                        }
+
                         return {
                             "success": True,
                             "content": content,
                             "model": model.model_identifier,
                             "provider": model.provider,
-                            "usage": result.get("usage", {}),
+                            "usage": usage,
                             "raw_response": result
                         }
                     else:
@@ -243,12 +252,21 @@ class UniversalAPIClient:
                     # 提取回复内容
                     if "candidates" in result and result["candidates"]:
                         content = result["candidates"][0]["content"]["parts"][0]["text"]
+
+                        # 转换Google API的usage格式为标准格式
+                        usage_metadata = result.get("usageMetadata", {})
+                        usage = {
+                            "prompt_tokens": usage_metadata.get("promptTokenCount", 0),
+                            "completion_tokens": usage_metadata.get("candidatesTokenCount", 0),
+                            "total_tokens": usage_metadata.get("totalTokenCount", 0)
+                        }
+
                         return {
                             "success": True,
                             "content": content,
                             "model": model.model_identifier,
                             "provider": model.provider,
-                            "usage": result.get("usageMetadata", {}),
+                            "usage": usage,
                             "raw_response": result
                         }
                     else:
