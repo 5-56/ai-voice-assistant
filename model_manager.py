@@ -50,37 +50,121 @@ class ModelManager:
             "openai": {
                 "name": "OpenAI",
                 "default_base_url": "https://api.openai.com/v1",
-                "common_models": ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"],
+                "common_models": ["gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-3.5-turbo"],
                 "auth_header": "Authorization",
-                "auth_prefix": "Bearer "
+                "auth_prefix": "Bearer ",
+                "api_type": "openai",
+                "endpoints": {
+                    "chat": "/chat/completions",
+                    "models": "/models"
+                }
             },
             "deepseek": {
                 "name": "DeepSeek",
                 "default_base_url": "https://api.deepseek.com/v1",
                 "common_models": ["deepseek-chat", "deepseek-coder"],
                 "auth_header": "Authorization",
-                "auth_prefix": "Bearer "
+                "auth_prefix": "Bearer ",
+                "api_type": "openai",
+                "endpoints": {
+                    "chat": "/chat/completions",
+                    "models": "/models"
+                }
             },
             "anthropic": {
-                "name": "Anthropic",
+                "name": "Anthropic Claude",
                 "default_base_url": "https://api.anthropic.com/v1",
-                "common_models": ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
+                "common_models": ["claude-3-5-sonnet-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
                 "auth_header": "x-api-key",
-                "auth_prefix": ""
+                "auth_prefix": "",
+                "api_type": "anthropic",
+                "endpoints": {
+                    "chat": "/messages",
+                    "complete": "/complete"
+                },
+                "additional_headers": {
+                    "anthropic-version": "2023-06-01"
+                }
             },
             "google": {
-                "name": "Google",
-                "default_base_url": "https://generativelanguage.googleapis.com/v1",
-                "common_models": ["gemini-pro", "gemini-pro-vision"],
+                "name": "Google Gemini",
+                "default_base_url": "https://generativelanguage.googleapis.com/v1beta",
+                "common_models": ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro", "gemini-pro-vision"],
                 "auth_header": "Authorization",
-                "auth_prefix": "Bearer "
+                "auth_prefix": "Bearer ",
+                "api_type": "google",
+                "endpoints": {
+                    "chat": "/models/{model}:generateContent",
+                    "stream": "/models/{model}:generateContentStream"
+                }
+            },
+            "baidu": {
+                "name": "百度文心一言",
+                "default_base_url": "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat",
+                "common_models": ["ernie-4.0-8k", "ernie-3.5-8k", "ernie-turbo-8k", "ernie-speed-8k"],
+                "auth_header": "Authorization",
+                "auth_prefix": "Bearer ",
+                "api_type": "baidu",
+                "endpoints": {
+                    "chat": "/completions"
+                },
+                "requires_access_token": True
+            },
+            "alibaba": {
+                "name": "阿里通义千问",
+                "default_base_url": "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation",
+                "common_models": ["qwen-turbo", "qwen-plus", "qwen-max", "qwen-max-longcontext"],
+                "auth_header": "Authorization",
+                "auth_prefix": "Bearer ",
+                "api_type": "alibaba",
+                "endpoints": {
+                    "chat": "/generation"
+                }
+            },
+            "xunfei": {
+                "name": "讯飞星火",
+                "default_base_url": "https://spark-api.xf-yun.com/v1.1",
+                "common_models": ["spark-3.5", "spark-3.0", "spark-2.0", "spark-1.5"],
+                "auth_header": "Authorization",
+                "auth_prefix": "Bearer ",
+                "api_type": "xunfei",
+                "endpoints": {
+                    "chat": "/chat"
+                },
+                "requires_signature": True
+            },
+            "zhipu": {
+                "name": "智谱ChatGLM",
+                "default_base_url": "https://open.bigmodel.cn/api/paas/v4",
+                "common_models": ["glm-4", "glm-4v", "glm-3-turbo"],
+                "auth_header": "Authorization",
+                "auth_prefix": "Bearer ",
+                "api_type": "zhipu",
+                "endpoints": {
+                    "chat": "/chat/completions"
+                }
+            },
+            "baichuan": {
+                "name": "百川智能",
+                "default_base_url": "https://api.baichuan-ai.com/v1",
+                "common_models": ["baichuan2-turbo", "baichuan2-turbo-192k"],
+                "auth_header": "Authorization",
+                "auth_prefix": "Bearer ",
+                "api_type": "openai",
+                "endpoints": {
+                    "chat": "/chat/completions"
+                }
             },
             "custom": {
                 "name": "自定义",
                 "default_base_url": "",
                 "common_models": [],
                 "auth_header": "Authorization",
-                "auth_prefix": "Bearer "
+                "auth_prefix": "Bearer ",
+                "api_type": "openai",
+                "endpoints": {
+                    "chat": "/chat/completions"
+                }
             }
         }
         

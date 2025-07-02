@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-DeepSeek API客户端模块
-实现与DeepSeek大语言模型的对话功能
+AI客户端模块
+实现与多个AI模型提供商的对话功能
+支持DeepSeek、OpenAI、Claude、Gemini等多种模型
 """
 
 import asyncio
@@ -13,6 +14,15 @@ from openai import OpenAI
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 from config_manager import get_config
+
+# 模型管理集成
+try:
+    from model_manager import get_model_manager
+    from universal_api_client import get_universal_client
+    MODEL_MANAGER_AVAILABLE = True
+except ImportError:
+    MODEL_MANAGER_AVAILABLE = False
+    logging.warning("模型管理系统不可用，将使用传统DeepSeek客户端")
 
 # RAG系统集成
 try:
@@ -39,13 +49,24 @@ except ImportError:
     logging.warning("IP查询功能不可用")
 
 class DeepSeekClient:
-    """DeepSeek API客户端"""
-    
+    """AI客户端（支持多模型提供商）"""
+
     def __init__(self):
         self.config = get_config()
         self.client: Optional[OpenAI] = None
         self.last_request_time = 0
         self.rate_limit_delay = 1.0  # 请求间隔（秒）
+
+        # 初始化模型管理器和通用客户端
+        if MODEL_MANAGER_AVAILABLE:
+            self.model_manager = get_model_manager()
+            self.universal_client = get_universal_client()
+            self.use_universal_client = True
+            logging.info("使用通用API客户端，支持多模型提供商")
+        else:
+            self.use_universal_client = False
+            logging.info("使用传统DeepSeek客户端")
+
         self._initialize_client()
     
     def _initialize_client(self) -> bool:
@@ -190,10 +211,39 @@ class DeepSeekClient:
                     rag_sources = sources
                     logging.info(f"RAG增强: 找到 {len(sources)} 个相关文档")
 
-            response = self._make_request(enhanced_messages, stream=False, **kwargs)
+            # 使用通用客户端或传统客户端
+            if self.use_universal_client:
+                # 使用通用API客户端（支持多模型）
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    api_result = loop.run_until_complete(
+                        self.universal_client.chat_completion(enhanced_messages, **kwargs)
+                    )
+                finally:
+                    loop.close()
 
-            # 获取AI响应内容
-            ai_content = response.choices[0].message.content
+                if not api_result["success"]:
+                    return {
+                        "success": False,
+                        "error": api_result["error"],
+                        "rag_sources": rag_sources
+                    }
+
+                ai_content = api_result["content"]
+                model_name = api_result.get("model", "unknown")
+                usage = api_result.get("usage", {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0})
+
+            else:
+                # 使用传统DeepSeek客户端
+                response = self._make_request(enhanced_messages, stream=False, **kwargs)
+                ai_content = response.choices[0].message.content
+                model_name = response.model
+                usage = {
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "completion_tokens": response.usage.completion_tokens,
+                    "total_tokens": response.usage.total_tokens
+                }
 
             # 如果使用了RAG，添加来源信息
             if rag_sources:
@@ -202,17 +252,13 @@ class DeepSeekClient:
             result = {
                 "success": True,
                 "content": ai_content,
-                "usage": {
-                    "prompt_tokens": response.usage.prompt_tokens,
-                    "completion_tokens": response.usage.completion_tokens,
-                    "total_tokens": response.usage.total_tokens
-                },
-                "model": response.model,
-                "created": response.created,
+                "usage": usage,
+                "model": model_name,
+                "created": int(time.time()),
                 "rag_sources": rag_sources  # 添加RAG来源信息
             }
 
-            logging.info(f"聊天完成成功: {result['usage']['total_tokens']} tokens, RAG来源: {len(rag_sources)}")
+            logging.info(f"聊天完成成功: {usage['total_tokens']} tokens, RAG来源: {len(rag_sources)}")
             return result
 
         except Exception as e:
